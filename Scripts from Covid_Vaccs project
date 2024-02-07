@@ -1,0 +1,192 @@
+Select *
+  from `innate-star-404300.covid_deaths.coviddeaths`
+  where continent is not NULL
+  order by 3,4
+
+Select *
+  from `innate-star-404300.covid_vaccs.covidvaccs`
+  order by 3,4
+
+  ##select data we will be using
+
+select location, date, total_cases, new_cases, total_deaths, population
+    from `innate-star-404300.covid_deaths.coviddeaths`
+    order by 1,2
+
+##look at total cases vs total deaths, shows likelihood of death if you contract Covid, seperated by country
+
+select location, date, total_cases, total_deaths,(total_deaths/total_cases)*100 as DeathPercentage
+    from `innate-star-404300.covid_deaths.coviddeaths`
+    Where location = "United States"
+    order by 1,2
+
+##looking at total cases vs population
+select location, date, total_cases, population,(total_cases/population)*100 as Contractchance
+    from `innate-star-404300.covid_deaths.coviddeaths`
+    Where location = "United States"
+    order by 1,2
+
+##what countries have highest infection rate?
+select location, population, MAX(total_cases) as HighestInfectionCount, max((total_cases)/population)*100 as InfectionRate
+    from `innate-star-404300.covid_deaths.coviddeaths`
+    group by location, population
+    order by InfectionRate desc
+
+##showing countries with highest mortality rate
+select location, MAX(total_deaths) as MortalityCount,
+    from `innate-star-404300.covid_deaths.coviddeaths`
+    where continent is not NULL
+    group by location
+    order by MortalityCount desc
+
+##lets look at continents
+select continent, MAX(total_deaths) as MortalityCount
+    from `innate-star-404300.covid_deaths.coviddeaths`
+    where continent is not Null
+    group by continent
+    order by MortalityCount desc
+
+##trying to get world, high, low income etc but it is still including continents
+select location, MAX(total_deaths) as MortalityCount
+    from `innate-star-404300.covid_deaths.coviddeaths`
+    where continent is Null
+    group by location
+    order by MortalityCount desc
+
+##Global numbers
+##I can't get this to work; i get a division by 0 error message ==whooohoo, I fixed it!
+Select date, sum(new_cases) as total_cases, sum(cast(new_deaths as int)) as total_deaths, sum(cast(new_deaths as int))/sum(new_cases)*100 as WorldDeath
+  from `innate-star-404300.covid_deaths.coviddeaths`
+  where continent is not null
+  and new_cases !=0
+  group by date
+  order by 1,2
+
+##World Death percentage
+Select sum(new_cases) as total_cases, sum(cast(new_deaths as int)) as total_deaths, sum(cast(new_deaths as int))/sum(new_cases)*100 as WorldDeath
+  from `innate-star-404300.covid_deaths.coviddeaths`
+  where continent is not null
+  and new_cases !=0
+  order by 1,2
+
+Select *
+from `innate-star-404300.covid_vaccs.covidvaccs`
+
+Drop Table if exists innate-star-404300.PercVacc
+
+With PercVacc AS (
+Select 
+  death.continent, 
+  death.location, 
+  death.date, 
+  death.population, 
+  vacc.new_vaccinations, 
+  SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date) as RollingVacc,
+  (SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date)/death.population)*100 as PercRollVacc
+FROM `innate-star-404300.covid_deaths.coviddeaths` death
+  JOIN `innate-star-404300.covid_vaccs.covidvaccs` vacc
+    on death.location=vacc.location
+     and death.date=vacc.date
+WHERE death.continent is not null
+)
+
+Select * from PercVacc
+
+##trying to create view
+CREATE VIEW IF NOT EXISTS covid_deaths.view_vaccs (location, population, percrollvacc)
+
+AS (
+Select 
+  death.continent, 
+  death.location, 
+  death.date, 
+  death.population, 
+  vacc.new_vaccinations, 
+  SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date) as RollingVacc,
+  (SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date)/death.population)*100 as PercRollVacc
+FROM `innate-star-404300.covid_deaths.coviddeaths` death
+  JOIN `innate-star-404300.covid_vaccs.covidvaccs` vacc
+    on death.location=vacc.location
+     and death.date=vacc.date
+WHERE death.continent is not null
+)
+
+view_column_name_list :=
+  view_column[, ...]
+
+view_column :=
+  column_name [OPTIONS(view_column_option_list)]
+
+##tempt table new attempt, trying to view only certain columns
+
+With PercVacc AS (
+Select 
+  death.continent, 
+  death.location, 
+  death.date, 
+  death.population,
+  vacc.new_vaccinations, 
+  SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date) as RollingVacc,
+  (SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date)/death.population)*100 as PercRollVacc
+FROM `innate-star-404300.covid_deaths.coviddeaths` death
+  JOIN `innate-star-404300.covid_vaccs.covidvaccs` vacc
+    on death.location=vacc.location
+     and death.date=vacc.date
+WHERE death.continent is not null
+)
+
+Select 
+  location,
+  population,
+  MAX(PercRollVacc)
+from PercVacc
+Group by
+  location, population
+ORDER BY
+  population DESC;
+
+
+
+
+
+With PercVacc AS (
+Select 
+  death.continent, 
+  death.location, 
+  death.date, 
+  death.population, 
+  vacc.new_vaccinations, 
+  SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date) as RollingVacc,
+  (SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date)/death.population)*100 as PercRollVacc
+FROM `innate-star-404300.covid_deaths.coviddeaths` death
+  JOIN `innate-star-404300.covid_vaccs.covidvaccs` vacc
+    on death.location=vacc.location
+     and death.date=vacc.date
+WHERE death.continent is not null
+)
+
+Select continent, location, date, population, new_vaccinations, percRollVacc from PercVacc
+
+##can i get max of each location?
+Create View covid_deaths.PercVacc AS (
+Select 
+  death.continent, 
+  death.location, 
+  death.date, 
+  death.population, 
+  vacc.new_vaccinations, 
+  SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date) as RollingVacc,
+  (SUM(vacc.new_vaccinations) OVER(partition by death.location order by death.location, death.date)/death.population)*100 as PercRollVacc
+  FROM `innate-star-404300.covid_deaths.coviddeaths` death
+  JOIN `innate-star-404300.covid_vaccs.covidvaccs` vacc
+    on death.location=vacc.location
+     and death.date=vacc.date
+WHERE death.continent is not null
+)
+
+Select * from PercVacc
+
+View PercVacc
+
+
+
