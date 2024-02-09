@@ -73,7 +73,6 @@ Select *
 from `innate-star-404300.covid_vaccs.covidvaccs`
 
 ##This works and is large joined table with percent rolling vaccs but too large to export with free bigquery. Trying to trim somehow below as small percvacc.
-##ended up breaking it up by year. 2021 Jan 01-2023 Dec 31 three different tables.
 Drop Table if exists innate-star-404300.PercVacc
 
 With PercVacc AS (
@@ -190,14 +189,15 @@ and location not in ('World', 'European Union', 'International')
 Group by location
 order by TotalDeathCount desc
 
-##highest infection counts
-Select Location, Population, MAX(total_cases) as HighestInfectionCount,  Max((total_cases/population))*100 as PercentPopulationInfected
+##this time this one worked
+Select Location, Population,date, MAX(total_cases) as HighestInfectionCount,  Max((total_cases/population))*100 as PercentPopulationInfected
 From `innate-star-404300.covid_deaths.coviddeaths`
 --Where location like '%states%'
-Group by Location, Population
+Group by Location, Population, date
 order by PercentPopulationInfected desc
 
-##Highest counts , did not like date info. Made csv Percent population infected
+
+##Highest counts , did not like date info. Made csv Percent population infected  Turns out this wasn't as useful without date info!
 Select 
 Location, 
 Population,
@@ -209,7 +209,7 @@ Group by Location, Population
 order by PercentPopulationInfected desc;
 
 
-##everything below here is scrap code
+
 ##trying to create view
 CREATE VIEW IF NOT EXISTS covid_deaths.view_vaccs (location, population, percrollvacc)
 
@@ -309,5 +309,3 @@ Select * from PercVacc
 
 
 View PercVacc
-
-
